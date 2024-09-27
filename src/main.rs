@@ -4,11 +4,8 @@ use std::error::Error;
 use std::env;
 
 
-const FILE_NAME1: &str = "layer1.tga";
-const FILE_NAME2: &str = "pattern2.tga";
-const FILE_NAME3: &str = "text.tga";
 const PATH: &str = "/Users/j10/projects/cop3504c/project3/input/";
-const SAVE_AS: &str = "task3_multiply_screen.tga";
+
 
 fn multiply(image1: &mut RgbImage, image2: &mut RgbImage) -> RgbImage{
     //checks to see if the images are the same size
@@ -108,13 +105,14 @@ fn screen(image1: &mut RgbImage, image2: &mut RgbImage) -> RgbImage{
 
 
 fn main()-> Result<(), Box<dyn Error>>{
+    
+
+    //task 1: multiply layer1 and pattern1
 
 
-    let fullPath1 = format!("{}{}",PATH,FILE_NAME1);
+    let mut fullPath1 = format!("{}{}",PATH,"layer1.tga");
 
-    let fullPath2 = format!("{}{}",PATH,FILE_NAME2);
-
-    let fullPath3 = format!("{}{}",PATH,FILE_NAME3);
+    let mut fullPath2 = format!("{}{}",PATH,"pattern1.tga");
 
 
 //load image data using image crate
@@ -122,15 +120,49 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let mut userImage2 = image::open(&Path::new(&fullPath2))?.to_rgb8();
 
+    let output = multiply(&mut userImage1, &mut userImage2);
+
+    output.save("../output/part1.tga")?;
+
+
+
+
+    //task2 : subtract layer2 from car.tga -----------------
+    let mut fullPath1 = format!("{}{}",PATH,"car.tga");
+
+    let mut fullPath2 = format!("{}{}",PATH,"layer2.tga");
+
+
+//load image data using image crate
+    let mut userImage1 = image::open(&Path::new(&fullPath1))?.to_rgb8();
+
+    let mut userImage2 = image::open(&Path::new(&fullPath2))?.to_rgb8();
+
+    let output = subtract(&mut userImage1, &mut userImage2);
+
+    output.save("../output/part2.tga")?;
+
+
+     //task3: multiply layer1 and pattern2 then screen it with text -----------------
+    let mut fullPath1 = format!("{}{}",PATH,"layer1.tga");
+
+    let mut fullPath2 = format!("{}{}",PATH,"pattern2.tga");
+
+    let mut fullPath3 = format!("{}{}",PATH,"text.tga");
+
+//load image data using image crate
+    let mut userImage1 = image::open(&Path::new(&fullPath1))?.to_rgb8();
+
+    let mut userImage2 = image::open(&Path::new(&fullPath2))?.to_rgb8();
+
     let mut userImage3 = image::open(&Path::new(&fullPath3))?.to_rgb8();
-    
 
-    let mut mid = multiply(&mut userImage1,&mut userImage2);
 
-    let output = screen(&mut mid, &mut userImage3);
+    let mut mid = multiply(&mut userImage1, &mut userImage2);
 
-    output.save(format!("{}{}","../output/",SAVE_AS))?;
+    let output = screen(&mut userImage3, &mut mid);
 
+    output.save("../output/part3.tga")?;
 
    Ok(()) 
 
