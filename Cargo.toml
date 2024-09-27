@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 tinytga = "0.5"
 embedded-graphics = "0.7"
+image = "0.24.6"
