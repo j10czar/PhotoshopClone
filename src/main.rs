@@ -2,6 +2,8 @@ use image::{DynamicImage, GenericImageView, ImageBuffer, RgbImage};
 use std::path::Path;
 use std::error::Error;
 use std::env;
+use itertools::izip;
+use image::imageops::rotate180;
 
 
 const PATH: &str = "/Users/j10/projects/cop3504c/project3/input/";
@@ -316,6 +318,129 @@ fn task8b(image1: &mut RgbImage) -> RgbImage{
 
 
 
+fn task9(red: &mut RgbImage, green: &mut RgbImage, blue: &mut RgbImage) -> RgbImage{
+    //checks to see if the images are the same size
+    let (w,h) = red.dimensions();
+
+    let mut result = RgbImage::new(w,h);
+
+//uses the Izip package to iterate through 3 sets of images at the same time and return respective
+//pixel values
+    for (result_pixel, p1, p2, p3) in izip!(
+    result.pixels_mut(),
+    red.pixels(),
+    green.pixels(),
+    blue.pixels()){
+
+
+        let [r1,g1,b1] = p1.0;
+        let [r2,g2,b2] = p2.0;
+        let [r3,g3,b3] = p3.0;
+
+        let r = r1;
+        let g = g2;
+        let b = b3;
+ 
+
+        *result_pixel = image::Rgb([r,g,b])
+
+    }
+
+    result
+}
+
+
+
+fn bonus(image1: &mut RgbImage, image2: &mut RgbImage, image3: &mut RgbImage, image4: &mut RgbImage) -> RgbImage{
+    let (w,h) = image1.dimensions();
+
+    let mut result = RgbImage::new(w*2,h*2);
+    
+    //1st quadrant
+    for y in 0..h{
+        for x in 0..w{
+            let pixel = image1.get_pixel(x,y);
+
+            let [r,g,b] = pixel.0;
+
+            //get the mutable refrence to the empty image pixel
+
+            let pixel_mut = result.get_pixel_mut(x,y);
+
+            *pixel_mut = image::Rgb([r,g,b])
+
+
+
+
+        }
+    }
+
+    //2nd quadrant
+    for y in 0..h{
+        for x in 0..w{
+            let pixel = image2.get_pixel(x,y);
+
+            let [r,g,b] = pixel.0;
+
+            //get the mutable refrence to the empty image pixel
+
+            //shift refrence one picture width to the right
+            let pixel_mut = result.get_pixel_mut(x+w,y);
+
+            *pixel_mut = image::Rgb([r,g,b])
+
+
+
+
+        }
+    }
+
+
+    //3nd quadrant
+    for y in 0..h{
+        for x in 0..w{
+            let pixel = image3.get_pixel(x,y);
+
+            let [r,g,b] = pixel.0;
+
+            //get the mutable refrence to the empty image pixel
+
+            //shift refrence one picture width down from base 0,0
+            let pixel_mut = result.get_pixel_mut(x,y+h);
+
+            *pixel_mut = image::Rgb([r,g,b])
+
+
+
+
+        }
+    }
+
+    //4nd quadrant
+    for y in 0..h{
+        for x in 0..w{
+            let pixel = image4.get_pixel(x,y);
+
+            let [r,g,b] = pixel.0;
+
+            //get the mutable refrence to the empty image pixel
+
+            //shift refrence one picture width down from base 0,0 and one width to the right
+            let pixel_mut = result.get_pixel_mut(x+w,y+h);
+
+            *pixel_mut = image::Rgb([r,g,b])
+
+
+
+
+        }
+    }
+
+    result
+
+}
+
+
 fn main()-> Result<(), Box<dyn Error>>{
     
 
@@ -467,6 +592,73 @@ fn main()-> Result<(), Box<dyn Error>>{
 
 
     outputb.save("../output/part8_b.tga")?;
+
+    //task 9: merge the seperated images and make them into 1-------------
+
+
+    let mut fullPath1 = format!("{}{}",PATH,"layer_red.tga");
+
+    let mut fullPath2 = format!("{}{}",PATH,"layer_green.tga");
+
+    let mut fullPath3 = format!("{}{}",PATH,"layer_blue.tga");
+
+//load image data using image crate
+    let mut userImage1 = image::open(&Path::new(&fullPath1))?.to_rgb8();
+
+    let mut userImage2 = image::open(&Path::new(&fullPath2))?.to_rgb8();
+
+    let mut userImage3 = image::open(&Path::new(&fullPath3))?.to_rgb8();
+    
+
+
+    let output = task9(&mut userImage1, &mut userImage2, &mut userImage3);
+    output.save("../output/part9.tga")?;
+
+
+
+    //task 10: rotate text2 180----------
+    
+    //this can be accomplished very easily (huge shoutout to rust image module)
+    
+
+    let mut fullPath1 = format!("{}{}",PATH,"text2.tga");
+
+    let mut userImage1 = image::open(&Path::new(&fullPath1))?.to_rgb8();
+
+    let output = rotate180(&userImage1);
+    output.save("../output/part10.tga")?;
+
+    //lol
+
+
+    //extra credit create a car circles pattern and text at each quadrant of the screen-------------------
+
+
+    let mut fullPath1 = format!("{}{}",PATH,"car.tga");
+
+    let mut fullPath2 = format!("{}{}",PATH,"circles.tga");
+
+    let mut fullPath3 = format!("{}{}",PATH,"text.tga");
+
+    let mut fullPath4 = format!("{}{}",PATH,"pattern1.tga");
+
+//load image data using image crate
+    let mut userImage1 = image::open(&Path::new(&fullPath1))?.to_rgb8();
+
+    let mut userImage2 = image::open(&Path::new(&fullPath2))?.to_rgb8();
+
+    let mut userImage3 = image::open(&Path::new(&fullPath3))?.to_rgb8();
+
+    let mut userImage4 = image::open(&Path::new(&fullPath4))?.to_rgb8();
+
+
+
+    let output = bonus(&mut userImage1, &mut userImage2, &mut userImage3, &mut userImage4);
+
+    output.save("../output/extracredit.tga")?;
+
+    
+
 
 
 
