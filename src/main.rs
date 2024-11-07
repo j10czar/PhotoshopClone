@@ -47,7 +47,7 @@ fn writeFileWithImage(image: &RgbImage, header_path: &str, output_path: &str)-> 
 
     //create a cursor to read the header data in the specified range
     let mut cursor = Cursor::new(&headerRange);
-
+//use little endian becuase for tga files the smallest btye is listed with the least significant value fist
 
     //use the header struct we defined before to store our header data
     let idLength = cursor.read_u8()?;
@@ -147,10 +147,11 @@ fn multiply(image1: &mut RgbImage, image2: &mut RgbImage) -> RgbImage{
 
         //multiplies the pixels and devides by 255 to ensure they dont go out of range of the u8
         //int pixel value
+        //adding 127 to fix the truncation for integer division
 
-        let r = (r1 as u16 * r2 as u16/255) as u8;
-        let g = (g1 as u16 * g2 as u16/255) as u8;
-        let b = (b1 as u16 * b2 as u16/255) as u8;
+        let r = ((r1 as u16 * r2 as u16+127)/255) as u8;
+        let g = ((g1 as u16 * g2 as u16+127)/255) as u8;
+        let b = ((b1 as u16 * b2 as u16+127)/255) as u8;
 
         *result_pixel = image::Rgb([r,g,b])
 
@@ -209,13 +210,11 @@ fn screen(image1: &mut RgbImage, image2: &mut RgbImage) -> RgbImage{
 
         //screen formula 1-(1-A)*(1-B)
         //remember 1 is a representation of 255
+        //adding 127 to fix rounding again...
         
-        let r = (255-(((255-r1 as u16)*(255-r2 as u16))/255)) as u8;
-
-        let g = (255-(((255-g1 as u16)*(255-g2 as u16))/255)) as u8;
-
-        let b = (255-(((255-b1 as u16)*(255-b2 as u16))/255)) as u8;
-
+        let r = (255 - (((255 - r1 as u16) * (255 - r2 as u16) + 127) / 255)) as u8;
+        let g = (255 - (((255 - g1 as u16) * (255 - g2 as u16) + 127) / 255)) as u8;
+        let b = (255 - (((255 - b1 as u16) * (255 - b2 as u16) + 127) / 255)) as u8;
 
 
         *result_pixel = image::Rgb([r,g,b])
@@ -246,44 +245,33 @@ fn overlay(image1: &mut RgbImage, image2: &mut RgbImage) -> RgbImage{
 
         //if B<=0.5: C=2*A*B   
         //if B>0.5 C=1-2*(1-A)*(1-B)
-        
-        let r = if r2 <= 127{
-            let temp = (2*r1 as u32 *r2 as u32)/255;
-            //no semicolon to allow to set the value of r
-            temp.clamp(0,255) as u8
-        }
-        else{
-            let mut temp = 255-2*(((255-r1 as u16)*(255-r2 as u16))/255);
-            temp.clamp(0,255) as u8
-
+        let r = if r2 <= 127 {
+            let temp = (2 * r1 as u16 * r2 as u16 + 127) / 255;
+            temp.clamp(0, 255) as u8
+        } else {
+            let temp = 255 - ((2 * (255 - r1 as u16) * (255 - r2 as u16) + 127) / 255);
+            temp.clamp(0, 255) as u8
         };
 
-        let g = if g2 <= 127{
-            let temp = (2*g1 as u32 *g2 as u32)/255;
-            temp.clamp(0,255) as u8
-        }
-        else{
-            let mut temp = 255-2*(((255-g1 as u16)*(255-g2 as u16))/255);
-            temp.clamp(0,255) as u8
-
-
+        let g = if g2 <= 127 {
+            let temp = (2 * g1 as u16 * g2 as u16 + 127) / 255;
+            temp.clamp(0, 255) as u8
+        } else {
+            let temp = 255 - ((2 * (255 - g1 as u16) * (255 - g2 as u16) + 127) / 255);
+            temp.clamp(0, 255) as u8
         };
 
-        let b = if b2 <= 127{
-            let temp = (2*b1 as u32 *b2 as u32)/255;
-            temp.clamp(0,255) as u8
-        }
-        else{
-            let mut temp = 255-2*(((255-b1 as u16)*(255-b2 as u16))/255);
-            temp.clamp(0,255) as u8
-
+        let b = if b2 <= 127 {
+            let temp = (2 * b1 as u16 * b2 as u16 + 127) / 255;
+            temp.clamp(0, 255) as u8
+        } else {
+            let temp = 255 - ((2 * (255 - b1 as u16) * (255 - b2 as u16) + 127) / 255);
+            temp.clamp(0, 255) as u8
         };
 
+        *result_pixel = image::Rgb([r, g, b]);
 
-
-        *result_pixel = image::Rgb([r,g,b])
-
-    }
+   }
 
     result
 }
