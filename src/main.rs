@@ -4,9 +4,129 @@ use std::error::Error;
 use std::env;
 use itertools::izip;
 use image::imageops::rotate180;
+use std::fs::File;
+use std::io::{Read,Write, Cursor};
+use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
 
 const PATH: &str = "/Users/j10/projects/cop3504c/project3/input/";
+
+struct Header{
+    idLength: u8,
+    colorMapType: u8,
+    dataTypeCode: u8,
+    colorMapOrigin: u16,
+    colorMapLength: u16,
+    colorMapDepth: u8,
+    xOrigin: u16,
+    yOrigin: u16,
+    width: u16,
+    height: u16,
+    bitsPerPixel: u8,
+    imageDescriptor:u8
+
+}
+
+
+//converts Image crate to bytes and writes the file at the path with the headere data from the
+//og image
+fn writeFileWithImage(image: &RgbImage, header_path: &str, output_path: &str)-> Result<(), Box<dyn Error>>{
+
+
+    //create file that we are writing top
+
+    let mut outputFile = File::create(output_path)?;
+
+    //open one of the images to get header data
+    let mut headerFile = File::open(header_path)?;
+
+    //specify how long the header for all TGAs
+    let mut headerRange = [0u8;18];
+
+    headerFile.read_exact(&mut headerRange);
+
+    //create a cursor to read the header data in the specified range
+    let mut cursor = Cursor::new(&headerRange);
+
+
+    //use the header struct we defined before to store our header data
+    let idLength = cursor.read_u8()?;
+    let colorMapType = cursor.read_u8()?;
+    let dataTypeCode = cursor.read_u8()?;
+    let colorMapOrigin = cursor.read_u16::<LittleEndian>()?;
+    let colorMapLength = cursor.read_u16::<LittleEndian>()?;
+    let colorMapDepth = cursor.read_u8()?;
+    let xOrigin = cursor.read_u16::<LittleEndian>()?;
+    let yOrigin = cursor.read_u16::<LittleEndian>()?;
+    let mut width = cursor.read_u16::<LittleEndian>()?; //will be updated to image dimensions later
+    let mut height = cursor.read_u16::<LittleEndian>()?;
+    let bitsPerPixel = cursor.read_u8()?;
+    let imageDescriptor = cursor.read_u8()?;
+
+
+    //set the width and height to the imput image (just in case it differs thean the header w and h)
+    let (i_width, i_height) = image.dimensions();
+
+    width = i_width as u16;
+    height = i_height as u16;
+
+    println!("{}",width);
+
+    println!("{}",height);
+
+    let header = Header{
+        idLength,
+        colorMapType,
+        dataTypeCode,
+        colorMapOrigin,
+        colorMapLength,
+        colorMapDepth,
+        xOrigin,
+        yOrigin,
+        width,
+        height,
+        bitsPerPixel,
+        imageDescriptor,
+    };
+    
+    //create empty vector to write bytes to in order to write to new file 
+    let mut headerData = Vec::new();
+    headerData.write_u8(header.idLength)?;
+    headerData.write_u8(header.colorMapType)?;
+    headerData.write_u8(header.dataTypeCode)?;
+    headerData.write_u16::<LittleEndian>(header.colorMapOrigin)?;
+    headerData.write_u16::<LittleEndian>(header.colorMapLength)?;
+    headerData.write_u8(header.colorMapDepth)?;
+    headerData.write_u16::<LittleEndian>(header.xOrigin)?;
+    headerData.write_u16::<LittleEndian>(header.yOrigin)?;
+    headerData.write_u16::<LittleEndian>(header.width)?;
+    headerData.write_u16::<LittleEndian>(header.height)?;
+    headerData.write_u8(header.bitsPerPixel)?;
+    headerData.write_u8(header.imageDescriptor)?;
+
+
+
+
+
+    //writes the data vector to the outputFile
+    outputFile.write_all(&headerData)?;
+
+    for y in (0..i_height).rev(){
+        for x in 0..i_width{
+            let pixel = image.get_pixel(x,y);
+            let [r,g,b] = pixel.0;
+            outputFile.write_all(&[b,g,r])?;
+        }
+    }
+
+
+    Ok(())
+        
+    
+    
+    
+}
+
 
 
 fn multiply(image1: &mut RgbImage, image2: &mut RgbImage) -> RgbImage{
@@ -20,7 +140,7 @@ fn multiply(image1: &mut RgbImage, image2: &mut RgbImage) -> RgbImage{
     //zips the pixels together so we can iterate through both of them
     //also iterate through the result so we can assign the respective pixel value at the right spot
     for (result_pixel, (p1, p2)) in result
-    .pixels_mut()
+    .pixels_mut() //gives the mutable refence to the pixel data
     .zip(image1.pixels().zip(image2.pixels())){
         let [r1,g1,b1] = p1.0;
         let [r2,g2,b2] = p2.0;
@@ -459,8 +579,8 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let output = multiply(&mut userImage1, &mut userImage2);
 
-    output.save("../output/part1.tga")?;
 
+    writeFileWithImage(&output, &fullPath1, "../output/part1.tga")?;
 
 
 
@@ -477,8 +597,8 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let output = subtract(&mut userImage1, &mut userImage2);
 
-    output.save("../output/part2.tga")?;
 
+    writeFileWithImage(&output, &fullPath1, "../output/part2.tga")?;
 
      //task3: multiply layer1 and pattern2 then screen it with text -----------------
     let mut fullPath1 = format!("{}{}",PATH,"layer1.tga");
@@ -499,8 +619,8 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let output = screen(&mut userImage3, &mut mid);
 
-    output.save("../output/part3.tga")?;
 
+    writeFileWithImage(&output, &fullPath1, "../output/part3.tga")?;
 
 
     //task 4: multiply layer2 and circles then load pattern 2 and subtract the multiplication from
@@ -529,7 +649,8 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     
 
-    output.save("../output/part4.tga")?;
+    writeFileWithImage(&output, &fullPath1, "../output/part4.tga")?;
+
 
 
     //task5: combine layer1 (as top) with pattern1 using overlay--------------------------
@@ -547,8 +668,8 @@ fn main()-> Result<(), Box<dyn Error>>{
     let output = overlay(&mut userImage1, &mut userImage2);
 
 
-    output.save("../output/part5.tga")?;
 
+    writeFileWithImage(&output, &fullPath1, "../output/part5.tga")?;
 
     //task 6: load car.tga and add 200 to the green channel----------------------
     
@@ -558,7 +679,10 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let output = task6(&mut userImage1);
 
-    output.save("../output/part6.tga")?;
+    writeFileWithImage(&output, &fullPath1, "../output/part6.tga")?;
+
+
+
 
     //task 7: load car and multiply red by 4 and negate all blue --------
     
@@ -568,7 +692,7 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let output = task7(&mut userImage1);
 
-    output.save("../output/part7.tga")?;
+    writeFileWithImage(&output, &fullPath1, "../output/part7.tga")?;
 
 
     //task 8:load car and seperate the r g and b values to different files ------
@@ -585,13 +709,14 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let outputb = task8b(&mut userImage1);
 
-    outputr.save("../output/part8_r.tga")?;
+    writeFileWithImage(&outputr, &fullPath1, "../output/part8_r.tga")?;
 
 
-    outputg.save("../output/part8_g.tga")?;
+    writeFileWithImage(&outputg, &fullPath1, "../output/part8_g.tga")?;
 
 
-    outputb.save("../output/part8_b.tga")?;
+    writeFileWithImage(&outputb, &fullPath1, "../output/part8_b.tga")?;
+
 
     //task 9: merge the seperated images and make them into 1-------------
 
@@ -612,8 +737,8 @@ fn main()-> Result<(), Box<dyn Error>>{
 
 
     let output = task9(&mut userImage1, &mut userImage2, &mut userImage3);
-    output.save("../output/part9.tga")?;
 
+    writeFileWithImage(&output, &fullPath1, "../output/part9.tga")?;
 
 
     //task 10: rotate text2 180----------
@@ -626,7 +751,8 @@ fn main()-> Result<(), Box<dyn Error>>{
     let mut userImage1 = image::open(&Path::new(&fullPath1))?.to_rgb8();
 
     let output = rotate180(&userImage1);
-    output.save("../output/part10.tga")?;
+
+    writeFileWithImage(&output, &fullPath1, "../output/part10.tga")?;
 
     //lol
 
@@ -655,12 +781,7 @@ fn main()-> Result<(), Box<dyn Error>>{
 
     let output = bonus(&mut userImage1, &mut userImage2, &mut userImage3, &mut userImage4);
 
-    output.save("../output/extracredit.tga")?;
-
-    
-
-
-
+    writeFileWithImage(&output, &fullPath1, "../output/extracredit.tga")?;
 
    Ok(()) 
 

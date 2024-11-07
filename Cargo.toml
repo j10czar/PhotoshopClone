@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 image = "0.24.6"
 itertools = "0.10.5"
+byteorder = "1.4.3"
